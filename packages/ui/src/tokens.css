@@ -1,0 +1,81 @@
+/* Market Survivor design tokens (design.md §2). Dark theme only.
+   Components use the semantic layer (--bg, --panel, --raised, --line, --edge) so the
+   world state (data-world-state on <html>) can shift the whole interface at once. */
+:root {
+  color-scheme: dark;
+
+  /* Base */
+  --ink-900: #0b0b0d;
+  --ink-800: #141417;
+  --ink-700: #1c1c21;
+  --ink-600: #2a2a31;
+  --mist-100: #f2efe8;
+  --mist-400: #a39e94;
+  --champagne-500: #d9b26a;
+  --champagne-300: #e8cc8e;
+
+  /* Market semantics */
+  --up: #34c79a;
+  --down: #f2645a;
+  --up-dim: #1d4a40;
+  --down-dim: #4d2330;
+  --info: #6fa8ff;
+  --watch: #e8c547;
+  --warning: #f28c38;
+  --critical: #ff4d4d;
+
+  /* Asset classes */
+  --class-stocks: #7c8cf8;
+  --class-funds: #5cc8e6;
+  --class-fixed-income: #9ad18b;
+  --class-commodities: #e3b341;
+  --class-global: #c58af0;
+  --class-crypto: #f07fb1;
+  --class-prediction: #6fd6c4;
+  --class-cash: #a39e94;
+
+  /* Semantic surfaces */
+  --bg: var(--ink-900);
+  --panel: var(--ink-800);
+  --raised: var(--ink-700);
+  --line: var(--ink-600);
+  --edge: transparent;
+
+  /* Motion (design.md §10; values from design-library-pro motion.md): expo-out for entrances and UI,
+     ease-in for things leaving, sharp in-out for full-screen moves; .15 / .3 / .8 s tiers. */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-press: 150ms;
+  --t-panel: 300ms;
+  --t-reveal: 800ms;
+  --t-world: 600ms;
+}
+
+/* Colour-blind mode: blue/orange instead of green/red. Values also carry +/− and ▲/▼. */
+[data-cb='on'] {
+  --up: #4ea4f5;
+  --down: #f29a38;
+}
+
+/* World states (design.md §2.4) */
+[data-world-state='tension'] {
+  --edge: var(--warning);
+}
+[data-world-state='crash'],
+[data-world-state='halt'] {
+  --bg: #150e0f;
+  --panel: #1e1415;
+}
+[data-world-state='recovery'] {
+  --edge: var(--up);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-press: 0ms;
+    --t-panel: 0ms;
+    --t-reveal: 0ms;
+    --t-world: 0ms;
+  }
+}

@@ -1,0 +1,22 @@
+node_modules/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Dev file store (careers, ledgers). Replaced by Postgres later.
+.data/
+
+.env
+.env.*
+!.env.example
+
+# Local tooling and OS files
+.DS_Store
+*.log
+.codegraph/
+.claude/settings.local.json
+
+# Third-party site screenshots used as design references (not ours to redistribute)
+design/refs/
