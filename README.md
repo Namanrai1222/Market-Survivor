@@ -30,15 +30,16 @@ pnpm typecheck && pnpm lint && pnpm test
 [![CI/CD](https://github.com/Namanrai1222/Market-Survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/Namanrai1222/Market-Survivor/actions/workflows/ci.yml)
 
 ```
-push / PR ──► check ──────────────────────► docker ──────────────────────────► publish (main only)
-              typecheck · lint · tests       build image · run container ·       ghcr.io/namanrai1222/
-              production build               wait for healthcheck · curl page     market-survivor:latest
-                                             and API                              + :sha-<commit>
+push / PR ──► check ─────────────────► docker ──────────────────► kubernetes ─────────────► publish (main only)
+              typecheck · lint ·         build image · run it ·     kind cluster · apply       ghcr.io/namanrai1222/
+              tests · production build   healthcheck · curl page    k8s/ · rollout status ·    market-survivor:latest
+                                         and API                    curl via the Service       + :sha-<commit>
 ```
 
 - **`Dockerfile`:** a multi-stage build. The build stage installs with pnpm (dependency layer cached on the lockfile) and runs the Next.js production build; the runtime stage ships only the standalone server, runs as a non-root user, has a container healthcheck and keeps game saves on a `/data` volume.
 - **`docker-compose.yml`:** runs the published image (or builds it locally) on port 3000 with a named volume for saves.
-- **`.github/workflows/ci.yml`:** the pipeline above. The image is only published after the checks and the container smoke test pass.
+- **`k8s/`:** Kubernetes manifests (Kustomize): namespace, persistent volume claim for saves, a Deployment (non-root, readiness and liveness probes, CPU and memory limits, the seed key from a Secret) and a LoadBalancer Service.
+- **`.github/workflows/ci.yml`:** the pipeline above. The image is only published after the checks, the container smoke test and the Kubernetes deployment test pass.
 
 Run it with Docker:
 
@@ -47,6 +48,18 @@ echo "MS_SEED_KEY=$(openssl rand -hex 32)" > .env   # secret that seals career s
 docker compose up -d --build                        # or without --build to pull the published image
 open http://localhost:3000/games/market-survivor
 docker compose logs -f web                          # logs; `docker compose down` to stop (saves stay in the volume)
+```
+
+Run it on Kubernetes (Docker Desktop: Settings → Kubernetes → Enable Kubernetes):
+
+```bash
+docker build -t ghcr.io/namanrai1222/market-survivor:latest .        # or pull the published image
+kubectl apply -f k8s/namespace.yaml
+kubectl -n market-survivor create secret generic market-survivor --from-literal=MS_SEED_KEY=$(openssl rand -hex 32)
+kubectl apply -k k8s/
+kubectl -n market-survivor rollout status deployment/market-survivor
+open http://localhost:8080/games/market-survivor                      # LoadBalancer on Docker Desktop
+kubectl -n market-survivor get pods,svc,pvc                           # `kubectl delete -k k8s/` to remove
 ```
 
 ## Disclaimer

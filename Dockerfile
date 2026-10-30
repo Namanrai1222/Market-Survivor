@@ -24,7 +24,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     MS_DATA_DIR=/data
 # Run as an unprivileged user; game saves live on a volume at /data.
-RUN groupadd --system app && useradd --system --gid app app && mkdir /data && chown app:app /data
+# Fixed uid/gid 10001 so Kubernetes can match it (runAsUser / fsGroup in k8s/deployment.yaml).
+RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app && mkdir /data && chown app:app /data
 COPY --from=build --chown=app:app /app/apps/web/.next/standalone ./
 COPY --from=build --chown=app:app /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=app:app /app/apps/web/public ./apps/web/public

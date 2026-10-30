@@ -1,7 +1,8 @@
 name: CI/CD
 
 # Every push and PR: typecheck, lint, tests, production build (CI).
-# Then build the Docker image and smoke-test the running container.
+# Then build the Docker image, smoke-test the running container, and deploy it to a throwaway
+# Kubernetes cluster (kind) with the manifests in k8s/ to prove the rollout works.
 # On main only: publish the image to GitHub Container Registry (CD) as :latest and :sha-<commit>.
 
 on:
@@ -21,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
@@ -31,9 +32,18 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      - run: pnpm build
+      - name: Build
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          set +e
+          pnpm build 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          # Logs need a GitHub login; annotations don't. Surface the failure where anyone can read it.
+          if [ "$status" -ne 0 ]; then
+            echo "::error title=pnpm build failed::$(tail -n 40 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          fi
+          exit "$status"
 
   docker:
     needs: check
@@ -43,7 +53,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
 
       - name: Build image
@@ -70,6 +80,32 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs ms || true
+
+      - name: Create Kubernetes cluster (kind)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: ms
+
+      - name: Deploy to Kubernetes and test
+        run: |
+          docker tag "$IMAGE:test" "$IMAGE:latest"
+          kind load docker-image "$IMAGE:latest" --name ms
+          kubectl apply -f k8s/namespace.yaml
+          kubectl -n market-survivor create secret generic market-survivor --from-literal=MS_SEED_KEY="$(openssl rand -hex 32)"
+          kubectl apply -k k8s/
+          kubectl -n market-survivor rollout status deployment/market-survivor --timeout=180s
+          kubectl -n market-survivor port-forward service/market-survivor 8080:8080 >/dev/null 2>&1 &
+          sleep 3
+          curl -fsS -o /dev/null http://localhost:8080/games/market-survivor
+          curl -fsS -o /dev/null http://localhost:8080/api/ms/me
+          kubectl -n market-survivor get deployment,pods,service,pvc
+          echo "Deployed to Kubernetes and serving."
+
+      - name: Kubernetes diagnostics
+        if: failure()
+        run: |
+          kubectl -n market-survivor describe pods || true
+          kubectl -n market-survivor logs deployment/market-survivor --tail=50 || true
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -47,6 +47,12 @@ Status values: `COMPLETED` · `PARTIAL` · `BLOCKED` · `CANCELLED`
   - `docker` builds the image (GHA cache), runs it, waits for the healthcheck and curls the page and the API;
   - on pushes to `main`, it publishes `ghcr.io/namanrai1222/market-survivor:latest` and `:sha-<commit>`.
 - README: a DevOps section with a pipeline diagram, a status badge and run commands.
+- **Follow-up: Kubernetes.**
+  - `k8s/` (Kustomize): Namespace; a 1 Gi PVC for saves; a Deployment with one replica and the `Recreate` strategy (file store on an RWO volume), uid/gid 10001 with `fsGroup`, readiness and liveness probes, limits, all capabilities dropped, and `MS_SEED_KEY` from a Secret that is never committed; a LoadBalancer Service on port 8080.
+  - The Dockerfile pins the app user to uid/gid 10001.
+  - The CI `docker` job now creates a kind cluster, loads the image, applies `k8s/`, waits for `rollout status` and curls the page and the API through the Service.
+- **Follow-up: CI.** The first GitHub run failed at `pnpm build`, but the same sequence (typecheck → lint → test → build) passes on a fresh clone, on macOS and in a `linux/amd64` `node:24` container. Job logs need a GitHub login, so the build step now posts the last 40 log lines as a public `::error` annotation on failure. Bumped `actions/checkout` and `actions/setup-node` to v5 (the Node 20 deprecation).
+- Local network note: HTTPS from inside containers on this Mac sometimes fails with `SELF_SIGNED_CERT_IN_CHAIN` (something on the connection intercepts TLS). The local repro mounts the host's pnpm instead of downloading it. This doesn't affect GitHub's runners.
 
 ### Testing
 - Local `docker build` OK (415 MB image).

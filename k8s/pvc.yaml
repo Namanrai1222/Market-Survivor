@@ -1,0 +1,10 @@
+# Game saves (the JSON file store at MS_DATA_DIR=/data).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: market-survivor-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi

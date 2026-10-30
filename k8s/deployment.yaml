@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-survivor
+  labels:
+    app: market-survivor
+spec:
+  # shortcut: one replica with Recreate because saves are files on a ReadWriteOnce volume;
+  # scale out once the store moves to Postgres (CLAUDE.md).
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: market-survivor
+  template:
+    metadata:
+      labels:
+        app: market-survivor
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: web
+          image: ghcr.io/namanrai1222/market-survivor:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: MS_SEED_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: market-survivor
+                  key: MS_SEED_KEY
+          readinessProbe:
+            httpGet:
+              path: /games/market-survivor
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /games/market-survivor
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: '1'
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: market-survivor-data
