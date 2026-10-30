@@ -25,6 +25,30 @@ pnpm dev        # http://localhost:3000/games/market-survivor
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
+## DevOps: Docker and CI/CD
+
+[![CI/CD](https://github.com/Namanrai1222/Market-Survivor/actions/workflows/ci.yml/badge.svg)](https://github.com/Namanrai1222/Market-Survivor/actions/workflows/ci.yml)
+
+```
+push / PR ──► check ──────────────────────► docker ──────────────────────────► publish (main only)
+              typecheck · lint · tests       build image · run container ·       ghcr.io/namanrai1222/
+              production build               wait for healthcheck · curl page     market-survivor:latest
+                                             and API                              + :sha-<commit>
+```
+
+- **`Dockerfile`:** a multi-stage build. The build stage installs with pnpm (dependency layer cached on the lockfile) and runs the Next.js production build; the runtime stage ships only the standalone server, runs as a non-root user, has a container healthcheck and keeps game saves on a `/data` volume.
+- **`docker-compose.yml`:** runs the published image (or builds it locally) on port 3000 with a named volume for saves.
+- **`.github/workflows/ci.yml`:** the pipeline above. The image is only published after the checks and the container smoke test pass.
+
+Run it with Docker:
+
+```bash
+echo "MS_SEED_KEY=$(openssl rand -hex 32)" > .env   # secret that seals career seeds; .env is gitignored
+docker compose up -d --build                        # or without --build to pull the published image
+open http://localhost:3000/games/market-survivor
+docker compose logs -f web                          # logs; `docker compose down` to stop (saves stay in the volume)
+```
+
 ## Disclaimer
 
 Market Survivor is an educational game. Prices, events and performance in the game are **generated for a fictional world** and do not represent current, historical or predicted market prices. Time Machine scenarios borrow only the general shape of past market episodes, never real prices.

@@ -2,7 +2,7 @@
 
 Sequential, never reused. Newest entry at the top of the log.
 
-**Next task number: TASK-016**
+**Next task number: TASK-017**
 
 Status values: `COMPLETED` · `PARTIAL` · `BLOCKED` · `CANCELLED`
 
@@ -10,6 +10,7 @@ Status values: `COMPLETED` · `PARTIAL` · `BLOCKED` · `CANCELLED`
 
 | # | Date | Title | Status |
 |---|---|---|---|
+| TASK-016 | 2026-10-30 | Docker image, docker compose, CI/CD to GHCR | COMPLETED |
 | TASK-015 | 2026-10-21 | Fix: stray box on every tap, gap when switching desks | COMPLETED |
 | TASK-014 | 2026-10-21 | Interaction layer: tilt, magnetic CTAs, ripples, cursor halo, typed dialogue | COMPLETED |
 | TASK-013 | 2026-10-21 | Obsidian & Champagne palette + app-wide motion v2 | COMPLETED |
@@ -25,6 +26,31 @@ Status values: `COMPLETED` · `PARTIAL` · `BLOCKED` · `CANCELLED`
 | TASK-003 | 2026-10-12 | 3D Market City + real candlestick charts (design-library-pro) | COMPLETED |
 | TASK-002 | 2026-10-12 | Finish Phase 1: styles, API tests, lint/CI, browser verification | PARTIAL |
 | TASK-001 | 2026-09-28 | Read spec zip, start building (Phase 0 + Phase 1) | PARTIAL |
+
+---
+
+## TASK-016 — Docker image, docker compose, CI/CD to GHCR
+
+- **Date:** 2026-10-30
+- **Status:** COMPLETED
+
+### User request
+"I have to show this as my DevOps project: push to GitHub, make a CI/CD pipeline, host it on Docker and run it."
+
+### Done
+- `next.config.ts`: `output: 'standalone'`, with tracing from the monorepo root.
+- `Dockerfile`: multi-stage on `node:24-slim`, pnpm via corepack, the manifests-first layer cached on the lockfile. The runtime runs only the standalone server as the non-root `app` user, with `MS_DATA_DIR=/data` on a volume and a Node `fetch` healthcheck.
+- `.dockerignore`: excludes local state, `.env`, player data, `.git`, docs, art and design refs.
+- `docker-compose.yml`: the published image (or a local build), port 3000, named volume `ms-data`; it refuses to start without `MS_SEED_KEY` (read from a gitignored `.env`).
+- `.github/workflows/ci.yml` (now "CI/CD"):
+  - `check` runs typecheck, lint, tests and build;
+  - `docker` builds the image (GHA cache), runs it, waits for the healthcheck and curls the page and the API;
+  - on pushes to `main`, it publishes `ghcr.io/namanrai1222/market-survivor:latest` and `:sha-<commit>`.
+- README: a DevOps section with a pipeline diagram, a status badge and run commands.
+
+### Testing
+- Local `docker build` OK (415 MB image).
+- `docker compose up` gives a healthy container: the page and `/api/ms/me` return 200, consent returns 200, and creating a Daily career returns 201. Save files appear under `/data/players/…`, written as user `app`.
 
 ---
 

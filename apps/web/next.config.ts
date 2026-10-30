@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 // Baseline security headers (security.md §3.5). Nonce-based CSP lands with P9 hardening.
@@ -10,6 +11,9 @@ const securityHeaders = [
 
 const config: NextConfig = {
   transpilePackages: ['@ms/engine', '@ms/content', '@ms/ui'],
+  // Self-contained server bundle for the Docker image; tracing starts at the monorepo root (builds run in apps/web).
+  output: 'standalone',
+  outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

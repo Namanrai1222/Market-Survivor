@@ -1,0 +1,17 @@
+# docker compose up -d   →   http://localhost:3000/games/market-survivor
+# MS_SEED_KEY seals career seeds at rest and is required in production: put it in a .env file next to this one
+# (gitignored), e.g.  echo "MS_SEED_KEY=$(openssl rand -hex 32)" > .env
+services:
+  web:
+    image: ghcr.io/namanrai1222/market-survivor:latest
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      MS_SEED_KEY: ${MS_SEED_KEY:?Set MS_SEED_KEY in .env (openssl rand -hex 32)}
+    volumes:
+      - ms-data:/data
+    restart: unless-stopped
+
+volumes:
+  ms-data:

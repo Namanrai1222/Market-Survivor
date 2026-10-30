@@ -1,0 +1,18 @@
+# Keep the build context small and free of local state, secrets and personal data.
+**/node_modules
+**/.next
+**/.turbo
+**/.data
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.git
+.github
+.codegraph
+.claude
+design
+art
+docs
+**/.DS_Store
+*.log
